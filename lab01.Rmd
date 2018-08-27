@@ -1,0 +1,70 @@
+---
+title: 'Análise de Gastos de Deputados: Nossas Perguntas'
+author: "Luiz Fernando da Silva"
+date: "27 de agosto de 2018"
+output: html_document
+---
+
+```{r}
+library('tidyverse')
+library('gridExtra')
+```
+```{r}
+data <- read_csv('data/dadosCEAP.csv')
+```
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+maisGastadores <- data %>%
+  filter(valorLíquido > 0) %>%
+  group_by(nomeParlamentar) %>% 
+  summarise(total = sum(valorLíquido)) %>% 
+  arrange(-total) %>% 
+  slice(1:5)
+
+menosGastadores <- data %>%
+  filter(valorLíquido > 0) %>%
+  group_by(nomeParlamentar) %>% 
+  summarise(total = sum(valorLíquido)) %>% 
+  arrange(total) %>% 
+  slice(1:5)
+
+grafico2 <- maisGastadores %>% 
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip()
+
+grafico1 <- menosGastadores %>% 
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip()
+
+grid.arrange(grafico1, grafico2, nrow = 2)
+```
+
+```{r}
+maiorGastoExterior <- data %>% 
+  group_by(nomeParlamentar) %>%
+  filter(tipoDocumento == 2) %>% 
+  summarise(total = sum(valorLíquido)) %>%
+  arrange(-total) %>%
+  slice(1:5)
+
+menorGastoExterior <- data %>% 
+  group_by(nomeParlamentar) %>%
+  filter(tipoDocumento == 2) %>% 
+  summarise(total = sum(valorLíquido)) %>%
+  arrange(-total) %>%
+  slice(1:5)
+
+g1 <- maiorGastoExterior %>% 
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip()
+
+g2 <- menorGastoExterior %>% 
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip()
+
+grid.arrange(g1, g2, nrow = 2)
+```
+
