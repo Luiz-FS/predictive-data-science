@@ -8,9 +8,12 @@ output: html_document
 ```{r}
 library('tidyverse')
 library('gridExtra')
+options(scipen = 999)
 ```
 ```{r}
 data <- read_csv('data/dadosCEAP.csv')
+limites <- read_csv('data/limiteMensalCEAP.csv')
+data %>% full_join(limites, by=c("sgUF" = "UF")) -> data
 ```
 
 
@@ -35,13 +38,11 @@ menosGastadores <- data %>%
   arrange(total) %>% 
   slice(1:5)
 
-grafico2 <- maisGastadores %>% 
-  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip()
+gastos <- union(maisGastadores, menosGastadores)
 
-grafico1 <- menosGastadores %>% 
-  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip()
-
-grid.arrange(grafico1, grafico2, nrow = 2)
+gastos %>% 
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip() +
+  guides(fill=guide_legend("Nome do Parlamentar"))
 ```
 
 # Questão 2
@@ -60,34 +61,56 @@ menorGastoExterior <- data %>%
   arrange(total) %>%
   slice(1:5)
 
-g1 <- maiorGastoExterior %>% 
-  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7) + coord_flip()
+gastosExterior <- union(maiorGastoExterior, menorGastoExterior)
 
-g2 <- menorGastoExterior %>% 
-  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7) + coord_flip()
-
-grid.arrange(g1, g2, nrow = 2)
+gastosExterior %>% 
+  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7) + coord_flip() + guides(fill=guide_legend("Estado"))
 ```
 
 # Questão 3
 
 ```{r}
-maiorGastosPartidosPB <- data %>% 
+gastosPartidosPB <- data %>% 
   filter(sgUF == "PB") %>%
   group_by(sgPartido) %>%
   summarise(total = sum(valorLíquido)) %>%
-  arrange(total) %>%
-  slice(1:5)
+  arrange(total)
 
-menorGastosPartidosPB <- data %>% 
-  filter(sgUF == "PB") %>%
-  group_by(sgPartido) %>%
-  summarise(total = sum(valorLíquido)) %>%
-  arrange(-total) %>%
-  slice(1:5)
 
-g1 <- maiorGastosPartidosPB %>% ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + geom_col(width = 0.7) + coord_flip()
-g2 <- menorGastosPartidosPB %>% ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + geom_col(width = 0.7) + coord_flip()
-
-grid.arrange(g1, g2, nrow = 2)
+gastosPartidosPB %>% ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + geom_col(width = 0.7) + coord_flip() + labs(x="Partido", y="Gasto total") + guides(fill=guide_legend("Partido"))
 ```
+
+# Questão 4
+```{r}
+dados <- data %>% group_by(nomeParlamentar, limite_mensal) %>%
+  summarise(total = sum(valorLíquido)) %>%
+  filter(limite_mensal < total) %>%
+  ungroup() %>%
+  arrange(-total) %>%
+  slice(1:10)
+
+dados %>% ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip()
+```
+
+
+# Questão 5
+```{r}
+maiorGastos <- data %>%
+  filter(tipoDespesa == "PASSAGENS AÉREAS") %>%
+  group_by(sgUF) %>%
+  summarise(total = sum(valorLíquido)) %>% na.omit()
+
+maiorGastos %>% ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Estado", y="Gasto total")
+```
+
+# Questão 6
+```{r}
+partidos <- data %>% filter(sgPartido %in% c("PT", "PMDB", "PSDB"))
+
+gastos <- partidos %>% group_by(tipoDespesa) %>%
+  summarise(total = sum(valorLíquido)) %>%
+  arrange(-total)
+
+gastos %>% ggplot(aes(x=reorder(tipoDespesa, total), y=total, fill=tipoDespesa)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Tipo de Despesa", y="Gasto total")
+```
+
