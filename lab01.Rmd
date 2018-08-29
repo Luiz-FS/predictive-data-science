@@ -23,6 +23,7 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Questão 1
+## Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos?
 ```{r}
 maisGastadores <- data %>%
   filter(valorLíquido > 0) %>%
@@ -41,11 +42,11 @@ menosGastadores <- data %>%
 gastos <- union(maisGastadores, menosGastadores)
 
 gastos %>% 
-  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7) + coord_flip() +
-  guides(fill=guide_legend("Nome do Parlamentar"))
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Nome do Parlamentar", y="Total gasto")
 ```
 
 # Questão 2
+## Quais os estados cujos deputados gastam mais no exterior? Quais os estados cujos deputados gastam menos no exterior?
 ```{r}
 maiorGastoExterior <- data %>% 
   group_by(sgUF) %>%
@@ -64,23 +65,25 @@ menorGastoExterior <- data %>%
 gastosExterior <- union(maiorGastoExterior, menorGastoExterior)
 
 gastosExterior %>% 
-  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7) + coord_flip() + guides(fill=guide_legend("Estado"))
+  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Sigla do estado", y="Total gasto")
 ```
 
 # Questão 3
-
+## Quais os partidos cujos parlamentares mais usam CEAP no estado da Paraíba? Quais são os que menos usam? Mesmas perguntas considerando valores em R$.
 ```{r}
 gastosPartidosPB <- data %>% 
   filter(sgUF == "PB") %>%
   group_by(sgPartido) %>%
-  summarise(total = sum(valorLíquido)) %>%
+  summarise(total = sum(valorLíquido), count = n()) %>%
   arrange(total)
 
 
-gastosPartidosPB %>% ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + geom_col(width = 0.7) + coord_flip() + labs(x="Partido", y="Gasto total") + guides(fill=guide_legend("Partido"))
+gastosPartidosPB %>% arrange(count) %>% ggplot(aes(x=reorder(sgPartido, count), y=count, fill=sgPartido)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Partido", y="Gasto total")
+gastosPartidosPB %>% ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Partido", y="Gasto total")
 ```
 
 # Questão 4
+## Quais os deputados que mais ultrapassam o limite de CEAP do seu estado?
 ```{r}
 dados <- data %>% group_by(nomeParlamentar, limite_mensal) %>%
   summarise(total = sum(valorLíquido)) %>%
@@ -88,12 +91,13 @@ dados <- data %>% group_by(nomeParlamentar, limite_mensal) %>%
   ungroup() %>%
   arrange(-total) %>%
   slice(1:10)
-
-dados %>% ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip()
+dados -> 
+dados %>% ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Nome do parlamentar", y="Total gasto")
 ```
 
 
 # Questão 5
+## Quais estados cujos parlamentares gastam mais com passagens aéreas?
 ```{r}
 maiorGastos <- data %>%
   filter(tipoDespesa == "PASSAGENS AÉREAS") %>%
@@ -104,13 +108,15 @@ maiorGastos %>% ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_c
 ```
 
 # Questão 6
+## Escolha três partidos e responda: Quais são os tipos de despesa mais utilizados no uso da CEAP pelos deputados desses partidos? Mesma pergunta considerando valores em R$.
 ```{r}
 partidos <- data %>% filter(sgPartido %in% c("PT", "PMDB", "PSDB"))
 
 gastos <- partidos %>% group_by(tipoDespesa) %>%
-  summarise(total = sum(valorLíquido)) %>%
+  summarise(total = sum(valorLíquido), count = n()) %>%
   arrange(-total)
 
+gastos %>% arrange(-count) %>% ggplot(aes(x=reorder(tipoDespesa, count), y=count, fill=tipoDespesa)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Tipo de Despesa", y="Quantidade de despesas")
 gastos %>% ggplot(aes(x=reorder(tipoDespesa, total), y=total, fill=tipoDespesa)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Tipo de Despesa", y="Gasto total")
 ```
 
