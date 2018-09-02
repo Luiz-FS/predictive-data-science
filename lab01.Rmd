@@ -91,8 +91,13 @@ dados <- data %>% group_by(nomeParlamentar, limite_mensal) %>%
   ungroup() %>%
   arrange(-total) %>%
   slice(1:10)
-dados -> 
-dados %>% ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Nome do parlamentar", y="Total gasto")
+
+grafico <- dados %>% ggplot(aes(x=reorder(nomeParlamentar, total), y=total)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + 
+  labs(x="Nome do parlamentar", y="Total gasto")
+
+grafico + geom_col(aes(x=reorder(nomeParlamentar, limite_mensal), y=limite_mensal, fill=nomeParlamentar), width = 0.7, show.legend = FALSE)
 ```
 
 
