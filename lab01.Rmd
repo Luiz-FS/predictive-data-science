@@ -13,7 +13,8 @@ options(scipen = 999)
 ```{r}
 data <- read_csv('data/dadosCEAP.csv')
 limites <- read_csv('data/limiteMensalCEAP.csv')
-data %>% full_join(limites, by=c("sgUF" = "UF")) -> data
+data <- data %>% full_join(limites, by=c("sgUF" = "UF"))
+data <- data %>% filter(valorLíquido > 0)
 ```
 
 
@@ -46,10 +47,17 @@ menosGastadores <- data %>%
 gastos <- union(maisGastadores, menosGastadores)
 
 # Plotando gráfico de barras
-gastos %>% 
+grafico1 <- maisGastadores %>% 
   ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + labs(x="Nome do Parlamentar", y="Total gasto")
+
+grafico2 <- menosGastadores %>% 
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Nome do Parlamentar", y="Total gasto")
+
+grid.arrange(grafico1, grafico2, nrow = 2)
 ```
 
 # Questão 2
@@ -87,22 +95,26 @@ Os gráficos abaixo exibe os partidos que mais usam o CEAP e os que mais gastam 
 # Sumarizando os dados de modo a agrupa por partidos no estado da paraíba
 gastosPartidosPB <- data %>% 
   filter(sgUF == "PB") %>%
+  group_by(nomeParlamentar, idCadastro) %>%
+  summarise(totalParlamentar = sum(valorLíquido), sgPartido=first(sgPartido), count = n()) %>%
   group_by(sgPartido) %>%
-  summarise(total = sum(valorLíquido), count = n()) %>%
+  summarise(total = median(totalParlamentar), count = median(count)) %>%
   arrange(total)
 
 # Plotando o gráfico de barras que mostra o ranking dos partidos que mais usam CEAP
-gastosPartidosPB %>% 
+grafico1 <- gastosPartidosPB %>% 
   arrange(count) %>% 
   ggplot(aes(x=reorder(sgPartido, count), y=count, fill=sgPartido)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + labs(x="Partido", y="Gasto total")
 
 # Plotando o gráfico de barras que mostra o ranking dos partidos que mais gastaram
-gastosPartidosPB %>% 
+grafico2 <- gastosPartidosPB %>% 
   ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + labs(x="Partido", y="Gasto total")
+
+grid.arrange(grafico1, grafico2, nrow = 2)
 ```
 
 # Questão 4
@@ -110,21 +122,20 @@ gastosPartidosPB %>%
 O gráfico abaixo mostra o ranking dos 10 deputados que mais ultrapassaram o limite de CEAP do seu estado, nele pode-se observar que o limite de todos são bem semelhantes e todos eles extrapolaram bastante esse limite. Se comparado ao gráfico da questão 1, quase todos os deputados que estão no top 5 dos que mais gastaram também estão entre os 10 que mais ultrapassaram o limite, com exceção do deputado Abel Mesquita Jr. Com base nessa visualização é possível questionar-se sobre de onde vieram os subssídios para todos esses gasto extras e qual despeza fez com que esses deputados ultrapassarem muito o limite da cota de seu estado.
 ```{r}
 # Filtrando e ordenando os dados para considerar apenas os deputados que passaram do limite mensal de seu estado
-dados <- data %>% group_by(nomeParlamentar, limite_mensal) %>%
-  summarise(total = sum(valorLíquido)) %>%
+dados <- data %>%
+  mutate(ano = format(dataEmissao, "%y"), mes = format(dataEmissao, "%m")) %>%
+  group_by(nomeParlamentar, ano, mes, idCadastro) %>%
+  summarise(total = sum(valorLíquido), limite_mensal = first(limite_mensal)) %>%
   filter(limite_mensal < total) %>%
+  mutate(extra = total - limite_mensal) %>%
   ungroup() %>%
-  arrange(-total) %>%
-  slice(1:10)
+  arrange(-extra)
 
 # Gerando gráfico de barras exibindo os gastos dos 10 parlamentares que mais ultrapassaram o limite
-grafico <- dados %>% ggplot(aes(x=reorder(nomeParlamentar, total), y=total)) + 
+dados %>% ggplot(aes(x=reorder(nomeParlamentar, extra), y=extra, fill=nomeParlamentar)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + 
   labs(x="Nome do parlamentar", y="Total gasto")
-
-# Adicionando informações sobre os limites de cada deputado em seu estado
-grafico + geom_col(aes(x=reorder(nomeParlamentar, limite_mensal), y=limite_mensal, fill=nomeParlamentar), width = 0.7, show.legend = FALSE)
 ```
 
 
