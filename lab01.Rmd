@@ -23,13 +23,15 @@ data <- data %>% filter(valorLíquido > 0)
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+## Descrição dos dados que serão utilizados nas análises
+![](images/foto.png)
+
 # Questão 1
 ### Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos?
-Como mostrado no gráfico abaixo os deputados que mais gastaram foram Edio Lopes, Rocha Abel Mesquita Jr., Alan Rick e Jhonatan de Jesus, e o que menos gastaram foram Renam filho, Marcelo Almeida, Marcio Monteiro, Eliseu Padilha e Camilo Cola. Por meio deste gráfico pode-se perceber a grande diferença na quantidade de gastos entre os deputados que mais gastaram e os que menos gastaram. Com essa análise existe uma questão a ser pensada: Qual motivo levou a essa diferença tão grande entre os gastos dos deputados?
+Como mostrado nos gráficos abaixo os deputados que mais gastaram foram Edio Lopes, Rocha Abel Mesquita Jr., Alan Rick e Jhonatan de Jesus, e o que menos gastaram foram Renam filho, Marcelo Almeida, Marcio Monteiro, Eliseu Padilha e Camilo Cola. Por meio deste gráfico pode-se perceber a grande diferença na quantidade de gastos entre os deputados que mais gastaram e os que menos gastaram. Com essa análise existe uma questão a ser pensada: Qual motivo levou a essa diferença tão grande entre os gastos dos deputados?
 ```{r}
 # Este código recupera os 5 deputados que mais gastaram
 maisGastadores <- data %>%
-  filter(valorLíquido > 0) %>%
   group_by(nomeParlamentar) %>% 
   summarise(total = sum(valorLíquido)) %>% 
   arrange(-total) %>% 
@@ -37,27 +39,22 @@ maisGastadores <- data %>%
 
 # Este código recupera os 5 deputados que menos gastaram
 menosGastadores <- data %>%
-  filter(valorLíquido > 0) %>%
   group_by(nomeParlamentar) %>% 
   summarise(total = sum(valorLíquido)) %>% 
   arrange(total) %>% 
   slice(1:5)
 
-# Unindo os dados dos deputados que mais gastaram e os que menos gastaram
-gastos <- union(maisGastadores, menosGastadores)
-
-# Plotando gráfico de barras
-grafico1 <- maisGastadores %>% 
+# Plotando gráfico de barras dos deputados que mais gastaram
+maisGastadores %>% 
   ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + labs(x="Nome do Parlamentar", y="Total gasto")
 
-grafico2 <- menosGastadores %>% 
+# Plotando gráfico de barras dos deputados que mais gastaram
+menosGastadores %>% 
   ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + labs(x="Nome do Parlamentar", y="Total gasto")
-
-grid.arrange(grafico1, grafico2, nrow = 2)
 ```
 
 # Questão 2
@@ -80,8 +77,10 @@ menorGastoExterior <- data %>%
   arrange(total) %>%
   slice(1:5)
 
+# Unindo os dados referentes ao maiorGastoExterior e o menorGastoExterior
 gastosExterior <- union(maiorGastoExterior, menorGastoExterior)
 
+#Plotando gráfico de barras para exibir as informações sobre os gastos
 gastosExterior %>% 
   ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
@@ -90,9 +89,11 @@ gastosExterior %>%
 
 # Questão 3
 ### Quais os partidos cujos parlamentares mais usam CEAP no estado da Paraíba? Quais são os que menos usam? Mesmas perguntas considerando valores em R$.
-Os gráficos abaixo exibe os partidos que mais usam o CEAP e os que mais gastam respectivamente. Comparando os dois gráficos é possível perceber que não necessariamente os partidos que mais usam o CEAP são aqueles que mais gastam, como por exemplo o PP, no ranking dos que mais usam ele aparece em segundo lugar, já no ranking dos que mais gastam aparece em sétimo, isso mostra que alguns partidos utilizaram serviços mais baratos que os demais.
+Os gráficos abaixo exibem os partidos que mais usam o CEAP e os que mais gastam respectivamente. Comparando os dois gráficos é possível perceber que não necessariamente os partidos que mais usam o CEAP são aqueles que mais gastam, como por exemplo o PP, no ranking dos que mais usam ele aparece em segundo lugar, já no ranking dos que mais gastam aparece em sétimo, isso mostra que alguns partidos utilizaram serviços mais baratos que os demais.
 ```{r}
-# Sumarizando os dados de modo a agrupa por partidos no estado da paraíba
+# Sumarizando os dados de modo a agrupar por partidos no estado da paraíba
+# A quantidade de vezes que um determinado partido usou o CEAP é calculada com base na mediana
+# Já que a mesma é uma medida que não é afetada do valores extermos
 gastosPartidosPB <- data %>% 
   filter(sgUF == "PB") %>%
   group_by(nomeParlamentar, idCadastro) %>%
@@ -119,13 +120,16 @@ grid.arrange(grafico1, grafico2, nrow = 2)
 
 #### Agrupando dados dos dados por nome dos parlamentares meses e anos e filtrando pelos que ultrapassaram o limite mensal de seu estado.
 ```{r}
-# Filtrando e ordenando os dados para considerar apenas os deputados que passaram do limite mensal de seu estado
+# Filtrando os dados para considerar apenas os deputados que passaram do limite mensal de seu estado
 dadosFiltrados <- data %>%
   mutate(ano = format(dataEmissao, "%y"), mes = format(dataEmissao, "%m")) %>%
   group_by(nomeParlamentar, ano, mes, idCadastro) %>%
   summarise(total = sum(valorLíquido), limite_mensal = first(limite_mensal)) %>%
   filter(limite_mensal < total)
 
+# Agrupando os dados pelo nome id dos deputados
+# O valor utilizado para mostrar o quanto um determinado deputado passou do limite da cota é baseado na mediana
+# Já que a mesma é uma medida que não é afetada do valores extermos
 dadosAgrupadosPorParlamentar <- dadosFiltrados %>%
   mutate(extra = total - limite_mensal) %>%
   group_by(nomeParlamentar, idCadastro) %>%
@@ -137,7 +141,7 @@ dadosAgrupadosPorParlamentar <- dadosFiltrados %>%
 ### Quais os deputados que mais ultrapassam o limite de CEAP do seu estado?
 Os dois gráficos abaixo mostram respectivamente o top 10 dos deputados que ultrapassaram mais vezes o limite mensal de da cota do CEAP e o top 10 da mediana valor total do limite ultrapassado de cada mês. O primeiro gráfico mostra que os 10 deputados do ranking passaram muitas vezes do limite da cota, o que pode ter causado uma grande quantidade de gastos extras usando o dinheiro público. No segundo gráfico é possível perceber que os deputados exibidos ultrapassaram muito o valor de sua cota, algo em torno de 50 mil e 160 mil. Ao comparar os dois gráficos pode-se visualizar que nenhum dos deputados que ultrapassaram o limite mais vezes está no ranking do que mais gastaram, isso pode ser explicado pelo fato de que alguns deputados extrapolaram muito o limite mensal do seu estado. Analizado os dois gráficos é possível questionar-se sobre qual a despesa que teve maior impácto para que esses deputados ultrapassarem tanto o limite e se esses gastos extras são realmente necessários.
 ```{r}
-# Gerando gráfico de barras exibindo os gastos dos 10 parlamentares que mais ultrapassaram o limite
+# Gerando gráfico de barras exibindo os gastos dos 10 parlamentares que ultrapassaram o limite mais vezes
 dadosAgrupadosPorParlamentar %>% 
   arrange(-vezesExtrapoladas) %>%
   slice(1:10) %>%
@@ -148,6 +152,7 @@ dadosAgrupadosPorParlamentar %>%
 ```
 
 ```{r}
+# Gerando gráfico de barras exibindo os gastos dos 10 parlamentares que mais ultrapassaram o limite
 dadosAgrupadosPorParlamentar %>% 
   arrange(-extra) %>%
   slice(1:10) %>%
@@ -159,14 +164,16 @@ dadosAgrupadosPorParlamentar %>%
 
 
 # Questão 5
-## Quais estados cujos parlamentares gastam mais com passagens aéreas?
+### Quais estados cujos parlamentares gastam mais com passagens aéreas?
 O gráfico abaixo mosrta que São Paulo e o Amazonas são os estados cujos parlamentares mais gastam com passagens aéreas. Pode-se perceber também que há uma diferença muito grande entre esses estados e os que menos gastam como Distrito Federal e amapá, isso pode ser explicado em partes pelo número de deputados de cada estado e a quantidade de viagens para o exterior que tendem a ser mais caras.
 ```{r}
+# Filtrando os dados para recuperar apenas as despesas com passagens aéreas
 maiorGastos <- data %>%
   filter(tipoDespesa == "PASSAGENS AÉREAS") %>%
   group_by(sgUF) %>%
   summarise(total = sum(valorLíquido)) %>% na.omit()
 
+# Plotando o gráfico que mostra o ranking dos estado que mais gastam com passagens aéreas
 maiorGastos %>% 
   ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
@@ -174,20 +181,25 @@ maiorGastos %>%
 ```
 
 # Questão 6
-## Escolha três partidos e responda: Quais são os tipos de despesa mais utilizados no uso da CEAP pelos deputados desses partidos? Mesma pergunta considerando valores em R$.
+### Escolha três partidos e responda: Quais são os tipos de despesa mais utilizados no uso da CEAP pelos deputados desses partidos? Mesma pergunta considerando valores em R$.
+Os partidos escolhidos foram PT, PMDB e PSDB, e os gráficos abaixo correspondem respectivamente a quantidades de vezes que esses partidos tiveram uma determinada despesa e o quanto foi gasto com cada despesa. Olhando o primeiro gráfico pode-se observar que o tipo de despesa mais frequente entre esses partidos é a emissão de bilhetes aéreos, o que mostra que os deputados viajam muito de avião, ela é também a maior despesa em relação a quantidade de gastos no segundo gráfico. Comparando os dois gráfico é possível perceber que nem todas os tipos de despesas mais frequentemente utilizadas são as que mais geram custos, como por exemplo a despesa com combustíveis e lubrificantes é a segunda mais frequênte, porém ao olhar para o segundo gráfico ela aparecem em quinto lugar, e a despesa que aparece em segundo é a divulgação das atividades parlamentares o que mostra que para esses partidos a divulgação de suas atividades é uma atividade de grande importância o que pode explicar o grande investimento nessa atividade.
 ```{r}
+# Filtrando partidos
 partidos <- data %>% filter(sgPartido %in% c("PT", "PMDB", "PSDB"))
 
+# Agrupando dados filtrados por tipo de despesa
 gastos <- partidos %>% group_by(tipoDespesa) %>%
   summarise(total = sum(valorLíquido), count = n()) %>%
   arrange(-total)
 
+# Plotando gráfico que mostra o ranking das despesas mais utilizadas
 gastos %>% 
   arrange(-count) %>% 
   ggplot(aes(x=reorder(tipoDespesa, count), y=count, fill=tipoDespesa)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + labs(x="Tipo de Despesa", y="Quantidade de despesas")
 
+# Plotando gráfico que mostra o ranking das despesas que mais geraram custos
 gastos %>% 
   ggplot(aes(x=reorder(tipoDespesa, total), y=total, fill=tipoDespesa)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
