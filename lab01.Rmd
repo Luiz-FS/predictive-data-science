@@ -23,8 +23,10 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 # Questão 1
-## Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos?
+### Quais são os deputados que gastaram mais dinheiro da CEAP? Quais são os mais econômicos?
+Como mostrado no gráfico abaixo os deputados que mais gastaram foram Edio Lopes, Rocha Abel Mesquita Jr., Alan Rick e Jhonatan de Jesus, e o que menos gastaram foram Renam filho, Marcelo Almeida, Marcio Monteiro, Eliseu Padilha e Camilo Cola. Por meio deste gráfico pode-se perceber a grande diferença na quantidade de gastos entre os deputados que mais gastaram e os que menos gastaram. Com essa análise existe uma questão a ser pensada: Qual motivo levou a essa diferença tão grande entre os gastos dos deputados?
 ```{r}
+# Este código recupera os 5 deputados que mais gastaram
 maisGastadores <- data %>%
   filter(valorLíquido > 0) %>%
   group_by(nomeParlamentar) %>% 
@@ -32,6 +34,7 @@ maisGastadores <- data %>%
   arrange(-total) %>% 
   slice(1:5)
 
+# Este código recupera os 5 deputados que menos gastaram
 menosGastadores <- data %>%
   filter(valorLíquido > 0) %>%
   group_by(nomeParlamentar) %>% 
@@ -39,15 +42,21 @@ menosGastadores <- data %>%
   arrange(total) %>% 
   slice(1:5)
 
+# Unindo os dados dos deputados que mais gastaram e os que menos gastaram
 gastos <- union(maisGastadores, menosGastadores)
 
+# Plotando gráfico de barras
 gastos %>% 
-  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Nome do Parlamentar", y="Total gasto")
+  ggplot(aes(x=reorder(nomeParlamentar, total), y=total, fill=nomeParlamentar)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Nome do Parlamentar", y="Total gasto")
 ```
 
 # Questão 2
-## Quais os estados cujos deputados gastam mais no exterior? Quais os estados cujos deputados gastam menos no exterior?
+### Quais os estados cujos deputados gastam mais no exterior? Quais os estados cujos deputados gastam menos no exterior?
+O gráfico abaixo mostra os 5 estadudos cujos deputados mais gastraram no exterior e os 5 que menos gastaram. A diferença nos gastos desses estados é consideravelmente grande se compararmos os que mais gastaram e os que menos gastaram, enquanto os estados no topo do ranking como SP e MG gastaram entre 75 mil e 100 mil, os que estão no final como PB e MA, gastaram menos de 6 mil.
 ```{r}
+# Este código pega os 5 estados cujos deputados mais gastam no exterior
 maiorGastoExterior <- data %>% 
   group_by(sgUF) %>%
   filter(tipoDocumento == 2) %>% 
@@ -55,6 +64,7 @@ maiorGastoExterior <- data %>%
   arrange(-total) %>%
   slice(1:5)
 
+# Este código pega os 5 estados cujos deputados menos gastam no exterior
 menorGastoExterior <- data %>% 
   group_by(sgUF) %>%
   filter(tipoDocumento == 2) %>% 
@@ -65,26 +75,41 @@ menorGastoExterior <- data %>%
 gastosExterior <- union(maiorGastoExterior, menorGastoExterior)
 
 gastosExterior %>% 
-  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Sigla do estado", y="Total gasto")
+  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Sigla do estado", y="Total gasto")
 ```
 
 # Questão 3
-## Quais os partidos cujos parlamentares mais usam CEAP no estado da Paraíba? Quais são os que menos usam? Mesmas perguntas considerando valores em R$.
+### Quais os partidos cujos parlamentares mais usam CEAP no estado da Paraíba? Quais são os que menos usam? Mesmas perguntas considerando valores em R$.
+Os gráficos abaixo exibe os partidos que mais usam o CEAP e os que mais gastam respectivamente. Comparando os dois gráficos é possível perceber que não necessariamente os partidos que mais usam o CEAP são aqueles que mais gastam, como por exemplo o PP, no ranking dos que mais usam ele aparece em segundo lugar, já no ranking dos que mais gastam aparece em sétimo, isso mostra que alguns partidos utilizaram serviços mais baratos que os demais.
 ```{r}
+# Sumarizando os dados de modo a agrupa por partidos no estado da paraíba
 gastosPartidosPB <- data %>% 
   filter(sgUF == "PB") %>%
   group_by(sgPartido) %>%
   summarise(total = sum(valorLíquido), count = n()) %>%
   arrange(total)
 
+# Plotando o gráfico de barras que mostra o ranking dos partidos que mais usam CEAP
+gastosPartidosPB %>% 
+  arrange(count) %>% 
+  ggplot(aes(x=reorder(sgPartido, count), y=count, fill=sgPartido)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Partido", y="Gasto total")
 
-gastosPartidosPB %>% arrange(count) %>% ggplot(aes(x=reorder(sgPartido, count), y=count, fill=sgPartido)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Partido", y="Gasto total")
-gastosPartidosPB %>% ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Partido", y="Gasto total")
+# Plotando o gráfico de barras que mostra o ranking dos partidos que mais gastaram
+gastosPartidosPB %>% 
+  ggplot(aes(x=reorder(sgPartido, total), y=total, fill=sgPartido)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Partido", y="Gasto total")
 ```
 
 # Questão 4
-## Quais os deputados que mais ultrapassam o limite de CEAP do seu estado?
+### Quais os deputados que mais ultrapassam o limite de CEAP do seu estado?
+O gráfico abaixo mostra o ranking dos 10 deputados que mais ultrapassaram o limite de CEAP do seu estado, nele pode-se observar que o limite de todos são bem semelhantes e todos eles extrapolaram bastante esse limite. Se comparado ao gráfico da questão 1, quase todos os deputados que estão no top 5 dos que mais gastaram também estão entre os 10 que mais ultrapassaram o limite, com exceção do deputado Abel Mesquita Jr. Com base nessa visualização é possível questionar-se sobre de onde vieram os subssídios para todos esses gasto extras e qual despeza fez com que esses deputados ultrapassarem muito o limite da cota de seu estado.
 ```{r}
+# Filtrando e ordenando os dados para considerar apenas os deputados que passaram do limite mensal de seu estado
 dados <- data %>% group_by(nomeParlamentar, limite_mensal) %>%
   summarise(total = sum(valorLíquido)) %>%
   filter(limite_mensal < total) %>%
@@ -92,11 +117,13 @@ dados <- data %>% group_by(nomeParlamentar, limite_mensal) %>%
   arrange(-total) %>%
   slice(1:10)
 
+# Gerando gráfico de barras exibindo os gastos dos 10 parlamentares que mais ultrapassaram o limite
 grafico <- dados %>% ggplot(aes(x=reorder(nomeParlamentar, total), y=total)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + 
   labs(x="Nome do parlamentar", y="Total gasto")
 
+# Adicionando informações sobre os limites de cada deputado em seu estado
 grafico + geom_col(aes(x=reorder(nomeParlamentar, limite_mensal), y=limite_mensal, fill=nomeParlamentar), width = 0.7, show.legend = FALSE)
 ```
 
@@ -109,7 +136,10 @@ maiorGastos <- data %>%
   group_by(sgUF) %>%
   summarise(total = sum(valorLíquido)) %>% na.omit()
 
-maiorGastos %>% ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Estado", y="Gasto total")
+maiorGastos %>% 
+  ggplot(aes(x=reorder(sgUF, total), y=total, fill=sgUF)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Estado", y="Gasto total")
 ```
 
 # Questão 6
@@ -121,7 +151,15 @@ gastos <- partidos %>% group_by(tipoDespesa) %>%
   summarise(total = sum(valorLíquido), count = n()) %>%
   arrange(-total)
 
-gastos %>% arrange(-count) %>% ggplot(aes(x=reorder(tipoDespesa, count), y=count, fill=tipoDespesa)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Tipo de Despesa", y="Quantidade de despesas")
-gastos %>% ggplot(aes(x=reorder(tipoDespesa, total), y=total, fill=tipoDespesa)) + geom_col(width = 0.7, show.legend = FALSE) + coord_flip() + labs(x="Tipo de Despesa", y="Gasto total")
+gastos %>% 
+  arrange(-count) %>% 
+  ggplot(aes(x=reorder(tipoDespesa, count), y=count, fill=tipoDespesa)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Tipo de Despesa", y="Quantidade de despesas")
+
+gastos %>% 
+  ggplot(aes(x=reorder(tipoDespesa, total), y=total, fill=tipoDespesa)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x="Tipo de Despesa", y="Gasto total")
 ```
 
