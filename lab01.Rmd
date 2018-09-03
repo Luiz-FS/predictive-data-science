@@ -5,12 +5,12 @@ date: "27 de agosto de 2018"
 output: html_document
 ---
 
-```{r}
+```{r, include=FALSE}
 library('tidyverse')
 library('gridExtra')
 options(scipen = 999)
 ```
-```{r}
+```{r, include=FALSE}
 data <- read_csv('data/dadosCEAP.csv')
 limites <- read_csv('data/limiteMensalCEAP.csv')
 data <- data %>% full_join(limites, by=c("sgUF" = "UF"))
@@ -117,30 +117,50 @@ grafico2 <- gastosPartidosPB %>%
 grid.arrange(grafico1, grafico2, nrow = 2)
 ```
 
-# Questão 4
-### Quais os deputados que mais ultrapassam o limite de CEAP do seu estado?
-O gráfico abaixo mostra o ranking dos 10 deputados que mais ultrapassaram o limite de CEAP do seu estado, nele pode-se observar que o limite de todos são bem semelhantes e todos eles extrapolaram bastante esse limite. Se comparado ao gráfico da questão 1, quase todos os deputados que estão no top 5 dos que mais gastaram também estão entre os 10 que mais ultrapassaram o limite, com exceção do deputado Abel Mesquita Jr. Com base nessa visualização é possível questionar-se sobre de onde vieram os subssídios para todos esses gasto extras e qual despeza fez com que esses deputados ultrapassarem muito o limite da cota de seu estado.
+#### Agrupando dados dos dados por nome dos parlamentares meses e anos e filtrando pelos que ultrapassaram o limite mensal de seu estado.
 ```{r}
 # Filtrando e ordenando os dados para considerar apenas os deputados que passaram do limite mensal de seu estado
-dados <- data %>%
+dadosFiltrados <- data %>%
   mutate(ano = format(dataEmissao, "%y"), mes = format(dataEmissao, "%m")) %>%
   group_by(nomeParlamentar, ano, mes, idCadastro) %>%
   summarise(total = sum(valorLíquido), limite_mensal = first(limite_mensal)) %>%
-  filter(limite_mensal < total) %>%
-  mutate(extra = total - limite_mensal) %>%
-  ungroup() %>%
-  arrange(-extra)
+  filter(limite_mensal < total)
 
+dadosAgrupadosPorParlamentar <- dadosFiltrados %>%
+  mutate(extra = total - limite_mensal) %>%
+  group_by(nomeParlamentar, idCadastro) %>%
+  summarise(extra = median(extra), vezesExtrapoladas = n()) %>%
+  ungroup()
+```
+
+# Questão 4
+### Quais os deputados que mais ultrapassam o limite de CEAP do seu estado?
+Os dois gráficos abaixo mostram respectivamente o top 10 dos deputados que ultrapassaram mais vezes o limite mensal de da cota do CEAP e o top 10 da mediana valor total do limite ultrapassado de cada mês. O primeiro gráfico mostra que os 10 deputados do ranking passaram muitas vezes do limite da cota, o que pode ter causado uma grande quantidade de gastos extras usando o dinheiro público. No segundo gráfico é possível perceber que os deputados exibidos ultrapassaram muito o valor de sua cota, algo em torno de 50 mil e 160 mil. Ao comparar os dois gráficos pode-se visualizar que nenhum dos deputados que ultrapassaram o limite mais vezes está no ranking do que mais gastaram, isso pode ser explicado pelo fato de que alguns deputados extrapolaram muito o limite mensal do seu estado. Analizado os dois gráficos é possível questionar-se sobre qual a despesa que teve maior impácto para que esses deputados ultrapassarem tanto o limite e se esses gastos extras são realmente necessários.
+```{r}
 # Gerando gráfico de barras exibindo os gastos dos 10 parlamentares que mais ultrapassaram o limite
-dados %>% ggplot(aes(x=reorder(nomeParlamentar, extra), y=extra, fill=nomeParlamentar)) + 
+dadosAgrupadosPorParlamentar %>% 
+  arrange(-vezesExtrapoladas) %>%
+  slice(1:10) %>%
+  ggplot(aes(x=reorder(nomeParlamentar, vezesExtrapoladas), y=vezesExtrapoladas, fill=nomeParlamentar)) + 
   geom_col(width = 0.7, show.legend = FALSE) + 
   coord_flip() + 
-  labs(x="Nome do parlamentar", y="Total gasto")
+  labs(x="Nome do parlamentar", y="Quantidade de vezes que ultrapassou o limite")
+```
+
+```{r}
+dadosAgrupadosPorParlamentar %>% 
+  arrange(-extra) %>%
+  slice(1:10) %>%
+  ggplot(aes(x=reorder(nomeParlamentar, extra), y=extra, fill=nomeParlamentar)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + 
+  labs(x="Nome do parlamentar", y="Mediana dos gastos dos limites ultrapassados")
 ```
 
 
 # Questão 5
 ## Quais estados cujos parlamentares gastam mais com passagens aéreas?
+O gráfico abaixo mosrta que São Paulo e o Amazonas são os estados cujos parlamentares mais gastam com passagens aéreas. Pode-se perceber também que há uma diferença muito grande entre esses estados e os que menos gastam como Distrito Federal e amapá, isso pode ser explicado em partes pelo número de deputados de cada estado e a quantidade de viagens para o exterior que tendem a ser mais caras.
 ```{r}
 maiorGastos <- data %>%
   filter(tipoDespesa == "PASSAGENS AÉREAS") %>%
