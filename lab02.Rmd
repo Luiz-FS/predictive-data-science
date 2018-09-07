@@ -1,0 +1,104 @@
+---
+title: "Análise de Gastos de Deputados"
+author: "Luiz Fernando da Silva"
+date: "6 de setembro de 2018"
+output: html_document
+---
+
+```{r, include=FALSE}
+library('tidyverse')
+library('gridExtra')
+options(scipen = 999)
+```
+```{r, include=FALSE}
+data <- read_csv('data/dadosCEAP.csv')
+data <- data %>% filter(valorLíquido > 0)
+```
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Descrição dos dados que serão utilizados nas análises
+![](images/foto.png)
+
+# Questão 1
+### Dentre os 20 deputados que mais gastaram dinheiro da CEAP, quais foram os tipos de despesas mais utilizados? Compare com as despesas dos 20 que menos gastaram.
+Como pode-se observar nos gráficos abaixo dos deputados que mais gastaram, as depesas mais utilizadas foram emissão de bilhetes aéreos, combustíveis e lubrificantes e telefonia. Já entre os deputados que menos gastaram as despesas mais utilizadas foram telefonia, serviços postais e combustíveis e lubrificantes. Analizando os dois gráfico é possível perceber que o gasto com emissão de bilhetes aéreo e telefonia tem um grande impácto nos gastos do dinheiro vindo do CEAP. 
+```{r}
+maisGastadores <- data %>% 
+  group_by(nomeParlamentar, idCadastro) %>%
+  summarise(custoTotal = sum(valorLíquido)) %>%
+  arrange(-custoTotal) %>%
+  ungroup() %>%
+  slice(1:20)
+
+despesasMaisUsadas <- data %>%
+  group_by(nomeParlamentar, idCadastro, tipoDespesa) %>%
+  summarise(quantidade = n())
+
+despesasMaisUsadasFiltradas <- despesasMaisUsadas %>% 
+  filter(nomeParlamentar %in% maisGastadores$nomeParlamentar)
+
+despesasMaisUsadasFiltradas %>%
+  group_by(tipoDespesa) %>%
+  summarise(quantidade = sum(quantidade)) %>%
+  arrange(-quantidade) %>%
+  ggplot(aes(x=reorder(tipoDespesa, quantidade), y=quantidade, fill=tipoDespesa)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x = "Tipo de Despesa", y = "Quantidade")
+```
+```{r}
+menosGastadores <- data %>% 
+  group_by(nomeParlamentar, idCadastro) %>%
+  summarise(custoTotal = sum(valorLíquido)) %>%
+  arrange(custoTotal) %>%
+  ungroup() %>%
+  slice(1:20)
+
+despesasMaisUsadas <- data %>%
+  group_by(nomeParlamentar, idCadastro, tipoDespesa) %>%
+  summarise(quantidade = n())
+
+despesasMaisUsadasFiltradas <- despesasMaisUsadas %>% 
+  filter(nomeParlamentar %in% menosGastadores$nomeParlamentar)
+
+despesasMaisUsadasFiltradas %>%
+  group_by(tipoDespesa) %>%
+  summarise(quantidade = sum(quantidade)) %>%
+  arrange(-quantidade) %>%
+  ggplot(aes(x=reorder(tipoDespesa, quantidade), y=quantidade, fill=tipoDespesa)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x = "Tipo de Despesa", y = "Quantidade")
+```
+
+# Questão 2
+### Quais os fornecedores que fornecem os serviços mais caros? E quais são que mais foram utilizados?
+```{r}
+fornecedoresMaisCaros <- data %>% 
+  group_by(fornecedor) %>%
+  summarise(mediana = median(valorLíquido)) %>%
+  arrange(-mediana) %>%
+  slice(1:10)
+
+fornecedoresMaisCaros %>%
+  ggplot(aes(x=reorder(fornecedor, mediana), y=mediana, fill=fornecedor)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x = "Fornecedor", y = "Mediana")
+```
+
+```{r}
+fornecedoresMaisUsados <- data %>%
+  group_by(fornecedor) %>%
+  summarise(total = n()) %>%
+  arrange(-total) %>%
+  slice(1:10)
+
+fornecedoresMaisUsados %>%
+  ggplot(aes(x=reorder(fornecedor, total), y=total, fill=fornecedor)) + 
+  geom_col(width = 0.7, show.legend = FALSE) + 
+  coord_flip() + labs(x = "Fornecedor", y = "Quantidade")
+```
+
+
