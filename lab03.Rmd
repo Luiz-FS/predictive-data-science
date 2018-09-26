@@ -1,0 +1,30 @@
+---
+title: "Regressão Linear para Explicar a votação de Deputados"
+author: "Luiz Fernando da Silva"
+date: "26 de setembro de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(reshape2)
+library(tidyverse)
+library(caret)
+library(lattice)
+```
+
+
+```{r, include=FALSE}
+dados_2006 <- read_csv('data/eleicoes_2006.csv')
+dados_2010 <- read_csv('data/eleicoes_2010.csv')
+dados_2006_2010 <- read_csv('data/eleicoes_2006_e_2010.csv')
+```
+
+```{r}
+dados_2006_2010[is.na(dados_2006_2010)] = 0
+```
+
+```{r}
+
+```
+
+
