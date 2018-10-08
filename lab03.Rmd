@@ -9,14 +9,83 @@ output: html_document
 library(reshape2)
 library(tidyverse)
 library(caret)
+library(here)
 library(lattice)
 ```
 
 
 ```{r, include=FALSE}
-dados_2006 <- read_csv('data/eleicoes_2006.csv')
-dados_2010 <- read_csv('data/eleicoes_2010.csv')
-dados_2006_2010 <- read_csv('data/eleicoes_2006_e_2010.csv')
+#dados_2006 <- read_csv('data/eleicoes_2006.csv')
+#dados_2010 <- read_csv('data/eleicoes_2010.csv')
+#dados_2006_2010 <- read_csv('data/eleicoes_2010.csv')
+
+dados_2006 <- readr::read_csv(
+  here::here('data/eleicoes_2006.csv'), 
+  local=readr::locale("br"),
+  col_types = cols(
+    ano = col_integer(),
+    sequencial_candidato = col_character(),
+    quantidade_doacoes = col_integer(),
+    quantidade_doadores = col_integer(),
+    total_receita = col_double(),
+    media_receita = col_double(),
+    recursos_de_outros_candidatos.comites = col_double(),
+    recursos_de_pessoas_fisicas = col_double(),
+    recursos_de_pessoas_juridicas = col_double(),
+    recursos_proprios = col_double(),
+    `recursos_de_partido_politico` = col_double(),
+    quantidade_despesas = col_integer(),
+    quantidade_fornecedores = col_integer(),
+    total_despesa = col_double(),
+    media_despesa = col_double(),
+    votos = col_integer(),
+    .default = col_character()))
+
+
+dados_2010 <- readr::read_csv(
+  here::here('data/eleicoes_2010.csv'), 
+  local=readr::locale("br"),
+  col_types = cols(
+    ano = col_integer(),
+    sequencial_candidato = col_character(),
+    quantidade_doacoes = col_integer(),
+    quantidade_doadores = col_integer(),
+    total_receita = col_double(),
+    media_receita = col_double(),
+    recursos_de_outros_candidatos.comites = col_double(),
+    recursos_de_pessoas_fisicas = col_double(),
+    recursos_de_pessoas_juridicas = col_double(),
+    recursos_proprios = col_double(),
+    `recursos_de_partido_politico` = col_double(),
+    quantidade_despesas = col_integer(),
+    quantidade_fornecedores = col_integer(),
+    total_despesa = col_double(),
+    media_despesa = col_double(),
+    votos = col_integer(),
+    .default = col_character()))
+
+
+dados_2006_2010 <- readr::read_csv(
+  here::here('data/eleicoes_2006_e_2010.csv'), 
+  local=readr::locale("br"),
+  col_types = cols(
+    ano = col_integer(),
+    sequencial_candidato = col_character(),
+    quantidade_doacoes = col_integer(),
+    quantidade_doadores = col_integer(),
+    total_receita = col_double(),
+    media_receita = col_double(),
+    recursos_de_outros_candidatos.comites = col_double(),
+    recursos_de_pessoas_fisicas = col_double(),
+    recursos_de_pessoas_juridicas = col_double(),
+    recursos_proprios = col_double(),
+    `recursos_de_partido_politico` = col_double(),
+    quantidade_despesas = col_integer(),
+    quantidade_fornecedores = col_integer(),
+    total_despesa = col_double(),
+    media_despesa = col_double(),
+    votos = col_integer(),
+    .default = col_character()))
 ```
 
 ```{r}
