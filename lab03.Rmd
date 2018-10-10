@@ -10,9 +10,10 @@ library(reshape2)
 library(tidyverse)
 library(caret)
 library(here)
+library(corrplot)
 library(lattice)
+library(broom)
 ```
-
 
 ```{r, include=FALSE}
 dados_2006 <- readr::read_csv(
@@ -36,8 +37,9 @@ dados_2006 <- readr::read_csv(
     media_despesa = col_double(),
     votos = col_integer(),
     .default = col_character()))
+```
 
-
+```{r, include=FALSE}
 dados_2010 <- readr::read_csv(
   here::here('data/eleicoes_2010.csv'), 
   local=readr::locale("br"),
@@ -59,8 +61,9 @@ dados_2010 <- readr::read_csv(
     media_despesa = col_double(),
     votos = col_integer(),
     .default = col_character()))
+```
 
-
+```{r, include=FALSE}
 dados_2006_2010 <- readr::read_csv(
   here::here('data/eleicoes_2006_e_2010.csv'), 
   local=readr::locale("br"),
@@ -84,12 +87,106 @@ dados_2006_2010 <- readr::read_csv(
     .default = col_character()))
 ```
 
+
 ```{r}
 dados_2006_2010[is.na(dados_2006_2010)] = 0
+dados_2006[is.na(dados_2006)] = 0
+dados_2010[is.na(dados_2010)] = 0
+```
+
+
+```{r}
+dados_filtrados_2006 <- dados_2006 %>% select(quantidade_doacoes, quantidade_despesas, quantidade_fornecedores, total_despesa, total_receita, media_despesa, media_receita, quantidade_doadores, recursos_de_outros_candidatos.comites, recursos_de_pessoas_fisicas, recursos_de_pessoas_juridicas, votos, recursos_de_partido_politico, recursos_proprios, partido)
 ```
 
 ```{r}
-
+dados_filtrados_2010 <- dados_2010 %>% select(quantidade_doacoes, quantidade_despesas, quantidade_fornecedores, total_despesa, total_receita, media_despesa, media_receita, quantidade_doadores, recursos_de_outros_candidatos.comites, recursos_de_pessoas_fisicas, recursos_de_pessoas_juridicas, votos, recursos_de_partido_politico, recursos_proprios)
 ```
 
+```{r}
+dados_filtrados_2006_2010 <- dados_2010 %>% select(quantidade_doacoes, quantidade_despesas, quantidade_fornecedores, total_despesa, total_receita, media_despesa, media_receita, quantidade_doadores, recursos_de_outros_candidatos.comites, recursos_de_pessoas_fisicas, recursos_de_pessoas_juridicas, votos, recursos_de_partido_politico, recursos_proprios)
+```
+
+
+```{r}
+dados_2006 %>% 
+  mutate(uf = as.factor(uf),
+         nome = as.factor(nome),
+         sexo = as.factor(sexo),
+         grau = as.factor(grau),
+         nome = as.factor(nome),
+         cargo = as.factor(cargo),
+         partido = as.factor(partido),
+         ocupacao = as.factor(ocupacao),
+         estado_civil = as.factor(estado_civil),
+         sequencial_candidato = as.numeric(sequencial_candidato)) -> dados_2006
+
+dados_2006 %>%  
+   mutate(recursos_totais = recursos_de_pessoas_fisicas +
+                            recursos_de_outros_candidatos.comites +
+                            recursos_de_pessoas_juridicas +
+                            recursos_proprios ) %>%
+   mutate_at(.vars = vars(quantidade_doacoes,
+                          quantidade_doadores,
+                          recursos_totais,
+                          total_receita,
+                          media_receita,
+                          sequencial_candidato,
+                          recursos_de_outros_candidatos.comites,
+                          recursos_de_pessoas_fisicas,
+                          recursos_de_pessoas_juridicas,
+                          recursos_proprios,
+                          recursos_de_partido_politico,
+                          quantidade_despesas,
+                          quantidade_fornecedores,
+                          total_despesa,
+                          media_despesa),
+             .funs = funs(as.numeric(scale(.)))) -> data_scaled
+
+# data_scaled$id <- 1:nrow(data_scaled)
+# 
+# data_scaled %>% 
+#   dplyr::sample_frac(.7) -> data_treino
+```
+
+### Questão 1 - Um modelo de regressão múltipla com todas as variáveis é plausível para explicar a variação em y (número de votos) em 2006? Mesma pergunta para 2010.
+
+Um modelo de regressão linear multipla com todas as variáveis não é tão bom para explicar a variação de y (Quantidade de votos), pois analizando as regressões criadas com os dados de 2006 e 2010, podemos observar que o R² não é tão alto (0.52 nos dados de 2006 e 0.43 nos de 2010) o que mostra que usar todas as variáveis não é bom para explicar os voto. Pode-se obsevar também que a muitas variáveis que não são necessárias no modelo, tais como, quantidade_despesas, quantidade_fornecedores e recursos_de_partido_politico.
+```{r}
+lmModel2006 <- lm(votos ~ quantidade_fornecedores * partido + media_despesa * partido +
+                  total_receita * total_despesa + partido * estado_civil + 
+                  recursos_de_outros_candidatos.comites * ocupacao +
+                  uf * total_despesa + total_receita * partido +
+                  recursos_de_partido_politico * partido + 
+                  recursos_totais * quantidade_doadores +
+                  total_despesa * partido  + 
+                  uf * recursos_proprios ,
+          data = data_scaled)
+broom::glance(lmModel2006)
+# print(summary(lmModel2006))
+# print(mean(lmModel2006$residuals))
+
+# p1 <- lmModel2006 %>% ggplot(aes(.fitted, .resid)) +
+#     geom_point() + geom_hline(yintercept=0, col="red", linetype="dashed") +
+#   xlab("Valores ajustados") + ylab("Resíduos") +
+#   ggtitle("Gráfico de Resíduos vs Ajustamento") + theme_bw()
+# p1
+
+# par(mfrow=c(2,2))
+# plot(lmModel2006)
+```
+
+```{r}
+lmModel2010 <- dados_filtrados_2010 %>% lm(formula = votos ~ .)
+summary(lmModel2010)
+
+# p1 <- lmModel2010 %>% ggplot(aes(.fitted, .resid)) +
+#     geom_point() + geom_hline(yintercept=0, col="red", linetype="dashed") +
+#   xlab("Valores ajustados") + ylab("Resíduos") +
+#   ggtitle("Gráfico de Resíduos vs Ajustamento") + theme_bw()
+# p1
+
+# par(mfrow=c(2,2))
+# plot(lmModel2010)
+```
 
