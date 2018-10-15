@@ -219,8 +219,8 @@ broom::glance(lmModel2010)
 ```
 
 ###2- Compare as regressões construídas para 2006 e 2010. Quais as diferenças/semelhanças percebidas? Algumas sugestões: Analise os plots de resíduos e verifique se há tendências nos erros para cada ano.
-* Quais variáveis conseguem explicar melhor o número de votos? Compare essas variáveis entre os modelos. Mesma coisa 
-* para as variáveis menos explicativas.
+* Analise os plots de resíduos e verifique se há tendências nos erros para cada ano.
+* Quais variáveis conseguem explicar melhor o número de votos? Compare essas variáveis entre os modelos. Mesma coisa para as variáveis menos explicativas.
 * Compare os valores de R2 e RSE considerando as regressões para cada ano.
 * Inclua outros pontos de comparação que você ache interessante.
 
@@ -244,6 +244,13 @@ p1 = p1 + ggtitle("Gráfico de Resíduos vs Ajustamento") +
     theme_bw()
 p1
 ```
+
+#### Comparando R² e RSE
+| |modelo 2006 | modelo 2010 |
+|:-:|:------:|:--------:|
+| R²  | 0.5779 | 0.5405 |
+| RSE  | 3213 | 3810 |
+| Adjusted R-squared| 0.5487 | 0.5129 |
 
 ###3- Todas as variáveis são úteis para os modelos de regressão? Há variáveis redudantes? Faça análises para 2006 e 2010 separadamente.
 Para esta análise, foram utilizada apenas as variáveis numéricas, afim de simplificar a análize, já que existem muitas categorias nas variáveis catégoricas. Observando o gráfico de correlações abaixo de 2006 e 2010 podemos obsevar que as variáveis total_despesa e total_receita são as que mais estão correlacionada com a variável votos em ambos os anos, e que a correlação entre elas mesmas é 1, o que pode indicar uma redundância ao utiliza-las na regressão, e outras variáveis como recursos_de_pessoas_físicas e recursos_de_pessoas_juridicas possuem uma baixa correlação com votos, o que mostra que elas podem não conseguir explicar os votos e podem ser removidas da regressão, ou seja, nem todas as variáveis são importantes para o modelo final da regressão, algumas delas podem ser removidas.
