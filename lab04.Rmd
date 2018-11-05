@@ -12,9 +12,8 @@ library(caret)
 
 ```{r}
 data_train <- read.csv("data/train.csv")
-data_train <- data_train %>% select(-partido,
-                 -uf,-nome,
-                 -estado_civil,
+data_train <- data_train %>% select(-nome, -uf
+                 -estado_civil, -partido
                  -ocupacao,-ano,
                  -cargo,-grau,-sexo,
                  -sequencial_candidato)
