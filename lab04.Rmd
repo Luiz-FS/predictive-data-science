@@ -1,0 +1,105 @@
+---
+title: "Predição de Votação de Deputados"
+author: "Luiz Fernando da Silva"
+date: "3 de novembro de 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(caret)
+```
+
+```{r}
+data_train <- read.csv("data/train.csv")
+data_train <- data_train %>% select(-partido,
+                 -uf,-nome,
+                 -estado_civil,
+                 -ocupacao,-ano,
+                 -cargo,-grau,-sexo,
+                 -sequencial_candidato)
+
+data_test <- read_csv("data/test.csv")
+```
+
+# RIDGE
+```{r}
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 10)  
+
+lambdaGrid <- expand.grid(lambda = 10^seq(10, -2, length=100))
+
+model <- train(votos ~ ., 
+               data = data_train,
+               method = "ridge",
+               trControl = fitControl,
+               preProcess = c('scale', 'center'),
+               tuneGrid = lambdaGrid,
+               na.action = na.omit)
+plot(model)
+model
+```
+
+# LASSO
+```{r}
+lambda <- expand.grid(fraction = seq(0.01, 10^-8, length=20))
+
+model_lasso <- train(votos ~ ., 
+                     data = data_train, 
+                     method = "lasso", 
+                     tuneGrid = lambda,
+                     preProc = c("center", "scale"),
+                     trControl = fitControl)
+plot(model_lasso)
+model_lasso
+```
+
+# KNN
+```{r}
+k <- expand.grid(k = seq(20,100, length=81))
+
+model_knn <- train(votos ~ ., 
+                     data = data_train, 
+                     method = "knn", 
+                     tuneGrid = k,
+                     preProc = c("center", "scale"),
+                     trControl = fitControl)
+plot(model_knn)
+model_knn
+```
+
+
+```{r}
+ggplot(varImp(model))
+```
+
+```{r}
+predictors <- predictors(model_lasso)
+predictors
+```
+
+```{r}
+data_train <- data_train %>% 
+         select(predictors, votos)
+```
+
+```{r}
+model_knn <- train(votos ~ ., 
+                     data = data_train, 
+                     method = "knn", 
+                     tuneGrid = k,
+                     preProc = c("center", "scale"),
+                     trControl = fitControl)
+plot(model_knn)
+model_knn
+```
+
+
+```{r}
+prediction <- predict(model_knn, data_test)
+
+data_out <- data.frame(ID = data_test$sequencial_candidato, votos = prediction)
+data_out$ID <-as.character(data_out$ID) 
+data_out %>% write_csv(path = "data/out.csv")
+prediction
+```
+
