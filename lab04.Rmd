@@ -10,16 +10,19 @@ library(tidyverse)
 library(caret)
 ```
 
+# Lendo e pre-processando os dados
 ```{r}
 data_train <- read.csv("data/train.csv")
-data_train <- data_train %>% select(-nome, -uf
-                 -estado_civil, -partido
+data_train <- data_train %>% select(-nome, -uf,
+                 -estado_civil, -partido,
                  -ocupacao,-ano,
                  -cargo,-grau,-sexo,
                  -sequencial_candidato)
 
 data_test <- read_csv("data/test.csv")
 ```
+
+# Modelos de regressão
 
 # RIDGE
 ```{r}
@@ -66,24 +69,40 @@ plot(model_knn)
 model_knn
 ```
 
+# Comparação entre os modelos em termos do erro RMSE de validação cruzada.
+```{r}
+summary(resamples(list(RIDGE = model, LASSO = model_lasso, KNN = model_knn )))
+```
 
+Como obesrvado acima, o modelo knn obteve o menor RMSE na faze de treino usando validação cruzada, indicando ser um bom modelo para utlizar.
+
+# Variáveis mais importantes de acordo com os modelos ridge e lasso
 ```{r}
 ggplot(varImp(model))
 ```
 
 ```{r}
+ggplot(varImp(model_lasso))
+```
+
+Obesvando os dois modelos, ambos indicam que as variáveis total_receita, toral_despesa e recursos_de_pessoas_juridicas são as mais importantes para o modelo
+
+```{r}
 predictors <- predictors(model_lasso)
 predictors
 ```
+Apenas as variáveis recursos_de_pessoas_fisicas, recursos_de_pessoas_juridicas e total_despesa foram matidas no modelo lasso, as demais foram descartadas  
 
+
+# Retreinando o modelo knn apenas com as variáveis consideradas mais importantes de acordo com o modelo lasso
 ```{r}
-data_train <- data_train %>% 
+filtered_train <- data_train %>% 
          select(predictors, votos)
 ```
 
 ```{r}
 model_knn <- train(votos ~ ., 
-                     data = data_train, 
+                     data = filtered_train, 
                      method = "knn", 
                      tuneGrid = k,
                      preProc = c("center", "scale"),
@@ -93,12 +112,32 @@ model_knn
 ```
 
 
+# Usando o método de floresta aleatória para gerar um novo modelo afim de comparalo com o melhor modelo gerado anteriormente
 ```{r}
-prediction <- predict(model_knn, data_test)
+trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 10)
+set.seed(3333)
+dtree_fit <- train(votos ~., data = data_train, method = "ranger",
+                   trControl=trctrl,
+                   tuneLength = 10,
+                   na.action = na.omit)
+plot(dtree_fit)
+```
+
+```{r}
+predictors(dtree_fit)
+```
+
+Como podemos obeservar abaixo, o modelo usando o método de floresta aleatória obteve um menor RMSE se comparado ao KNN
+```{r}
+summary(resamples(list(TREE = dtree_fit, KNN = model_knn )))
+```
+
+# Gerando predições usando o conjunto de testes
+```{r}
+prediction <- predict(dtree_fit, data_test)
 
 data_out <- data.frame(ID = data_test$sequencial_candidato, votos = prediction)
 data_out$ID <-as.character(data_out$ID) 
-data_out %>% write_csv(path = "data/out.csv")
-prediction
+data_out %>% write_csv(path = "data/out2.csv")
 ```
 
