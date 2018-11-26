@@ -26,6 +26,7 @@ data_test <- read_csv("data/test.csv")
 ```{r}
 data_train %>% 
   group_by(situacao) %>%
-  summarise(n_eleitos=n())
+  summarise(n_eleitos=(n()/nrow(data_train))*100) %>%
+  ggplot(aes(x=situacao, y=n_eleitos, fill=n_eleitos)) + geom_col() + labs(x = "Situação", y = "Percentual")
 ```
 
