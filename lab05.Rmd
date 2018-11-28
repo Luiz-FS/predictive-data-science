@@ -27,6 +27,20 @@ data_test <- read_csv("data/test.csv")
 data_train %>% 
   group_by(situacao) %>%
   summarise(n_eleitos=(n()/nrow(data_train))*100) %>%
-  ggplot(aes(x=situacao, y=n_eleitos, fill=n_eleitos)) + geom_col() + labs(x = "Situação", y = "Percentual")
+  ggplot(aes(x=situacao, y=n_eleitos, fill=situacao)) + geom_col() + labs(x = "Situação", y = "Percentual")
+```
+
+```{r}
+k <- expand.grid(k = seq(20,100, length=81))
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 10)  
+
+model_knn <- train(situacao ~ ., 
+                     data = data_train, 
+                     method = "knn", 
+                     tuneGrid = k,
+                     preProc = c("center", "scale"),
+                     trControl = fitControl)
+plot(model_knn)
+model_knn
 ```
 
