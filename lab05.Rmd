@@ -9,9 +9,11 @@ output: html_document
 ```{r}
 library(tidyverse)
 library(caret)
+library(DMwR)
+library(rpart)
 ```
 
-```{r}
+```{r, include=FALSE}
 data_train <- read.csv("data/train.csv")
 data_train <- data_train %>% select(-nome, -uf,
                  -estado_civil, -partido,
@@ -20,9 +22,23 @@ data_train <- data_train %>% select(-nome, -uf,
                  -sequencial_candidato)
 
 data_test <- read_csv("data/test.csv")
+data_test <- data_test %>% select(-nome, -uf,
+                 -estado_civil, -partido,
+                 -ocupacao,-ano,
+                 -cargo,-grau,-sexo)
+
 ```
 
+```{r}
+partition <- createDataPartition(y = data_train$situacao, p=0.75, list=FALSE)
+set.seed(9560)
+train_data <- data_train[partition, ]
+test_data <- data_train[-partition, ]
+```
 
+## Há desbalanceamento das classes (isto é, uma classe tem muito mais instâncias que outra)? Em que proporção? Quais efeitos colaterais o desbalanceamento de classes pode causar no classificador?
+
+Como pode-se observar no gráfico abaixo, há um grande desbalanceamento das classes, onde a classe não eleito representa certa de 87% do do total, o que afeta negativamente os algoritmos de predição, já que existem muito mais exemplos de uma classe do que de outra, tornando a predição pouco confiável.
 ```{r}
 data_train %>% 
   group_by(situacao) %>%
@@ -30,12 +46,23 @@ data_train %>%
   ggplot(aes(x=situacao, y=n_eleitos, fill=situacao)) + geom_col() + labs(x = "Situação", y = "Percentual")
 ```
 
+## Como você poderia tratar isso?
+
+```{r}
+balanced_data <- SMOTE(situacao ~ ., data  = train_data)                         
+table(balanced_data$situacao) 
+```
+
+## Treinando: um modelo de KNN, regressão logística, uma árvore de decisão e um modelo de adaboost.
+
+Treinando os modelos para testar o que resultará nas melhores predições
+
 ```{r}
 k <- expand.grid(k = seq(20,100, length=81))
-fitControl <- trainControl(method = "cv", number = 10, repeats = 5)  
+fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)  
 
 model_knn <- train(situacao ~ ., 
-                     data = data_train, 
+                     data = balanced_data, 
                      method = "knn", 
                      tuneGrid = k,
                      preProc = c("center", "scale"),
@@ -44,9 +71,11 @@ plot(model_knn)
 model_knn
 ```
 
+
+
 ```{r}
 model_logistc <- train(situacao ~ ., 
-                     data = data_train, 
+                     data = balanced_data, 
                      method = "glm", 
                      family = "binomial",
                      preProc = c("center", "scale"),
@@ -57,7 +86,7 @@ model_logistc
 ```{r}
 trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
 set.seed(3333)
-dtree_fit <- train(situacao ~., data = data_train, method = "rpart",
+dtree_fit <- train(situacao ~., data = balanced_data, method = "rpart",
                    trControl = trctrl,
                    tuneLength = 10)
 dtree_fit
@@ -65,14 +94,57 @@ dtree_fit
 
 ```{r}
 model_ada <- train(situacao ~ ., 
-                     data = data_train, 
+                     data = balanced_data, 
                      method = "ada", 
                      preProc = c("center", "scale"),
                      trControl = fitControl)
 model_ada
 ```
 
+## Reporte precision, recall e f-measure no treino e validação. Há uma grande diferença de desempenho no treino/validação? 
 
+```{r}
+# Adicionando a predição aos dados a partir do KNN
+test_data$prediction <- predict(model_knn, test_data)
+```
+
+#### Calculando os valores de CA, EA, CB, EB, onde o significado dos mesmos são respectivamente corretamente classificados em A, Erroneamente classificados em A, corretamente classificados em B e Erroneamente classificados em B.
+
+```{r}
+
+CA <- test_data %>% filter(situacao == "eleito", prediction == "eleito") %>% nrow()
+EA <- test_data %>% filter(situacao == "nao_eleito" , prediction == "eleito") %>% nrow() 
+CB <- test_data %>% filter(situacao == "nao_eleito" , prediction == "nao_eleito" ) %>% nrow()
+EB <- test_data %>% filter(situacao == "eleito", prediction == "nao_eleito" ) %>% nrow()
+```
+
+#### Calculando o precision, recall e f-measure.
+```{r}
+precision <- CA / (CA + EA)
+recall <- CA / (CA + EB)
+f_measure <- 2 * (precision * recall) / (precision + recall)
+precision
+recall
+f_measure
+```
+
+Como pode-se observar o modelo conseguiu uma precisão, recall e f-mesure altos, o que indica que esse é um bom modelo para ser usado nas presições.
+
+## Interprete as saídas dos modelos. Quais atributos parecem ser mais importantes de acordo com cada modelo?
+```{r}
+varImp(model_ada)
+varImp(model_knn)
+varImp(dtree_fit)
+varImp(model_logistc)
+```
+
+Para o modelo adaboost as variáveis mais importantes são: total_despesa, total_receita, quantidade_fornecedores
+Para o modelo knn as variáveis mais importantes são: total_despesa, total_receita, quantidade_fornecedores
+Para o modelo arvore de decisão as variáveis mais importantes são: total_receita, total_despesa, recursos_de_pessoas_juridicas
+Para o modelo regressão logistica as variáveis mais importantes são: recursos_de_pessoas_físicas, recursos_de_pessoas_juridicas, media_receita.
+
+
+## Envie seus melhores modelos à competição do Kaggle. Faça pelo menos uma submissão.
 ```{r}
 prediction <- predict(model_logistc, data_test)
 
