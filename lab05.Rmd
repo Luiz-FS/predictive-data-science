@@ -47,6 +47,7 @@ data_train %>%
 ```
 
 ## Como você poderia tratar isso?
+Para tratar o problema do desbalanceamento é preciso usar tecnicas de rebalanceamento. Duas das tecnicas de rebalanceamento são o UPSAMPLING e DOWNSAMPLING, no UPSAMPLING serão criadas amostras aleatórias para que a classe minoritária tenha o mesmo tamanho da classe majoritária, já no DOWNSAMPLING serão selecionadas aleatoriamente amostras da classe majoritária para que a mesma tenha o mesmo tamanho da classe majoritária. O SMOTE é uma tecnica hibrida que usa ambas as tecnicas mensionadas anteriomente para fazer o rebalanceamenteo das classes. 
 
 ```{r}
 balanced_data <- SMOTE(situacao ~ ., data  = train_data)                         
