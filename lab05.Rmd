@@ -6,7 +6,7 @@ output: html_document
 ---
 
 
-```{r}
+```{r, include=FALSE}
 library(tidyverse)
 library(caret)
 library(DMwR)
@@ -32,13 +32,13 @@ data_test <- data_test %>% select(-nome, -uf,
 ```{r}
 partition <- createDataPartition(y = data_train$situacao, p=0.75, list=FALSE)
 set.seed(9560)
-train_data <- data_train[partition, ]
-test_data <- data_train[-partition, ]
+data_train_reparted <- data_train[partition,]
+data_test_reparted <- data_train[-partition,]
 ```
 
 ## Há desbalanceamento das classes (isto é, uma classe tem muito mais instâncias que outra)? Em que proporção? Quais efeitos colaterais o desbalanceamento de classes pode causar no classificador?
 
-Como pode-se observar no gráfico abaixo, há um grande desbalanceamento das classes, onde a classe não eleito representa certa de 87% do do total, o que afeta negativamente os algoritmos de predição, já que existem muito mais exemplos de uma classe do que de outra, tornando a predição pouco confiável.
+Como pode-se observar no gráfico abaixo, há um grande desbalanceamento das classes, onde a classe não eleito representa cerca de 87% do total, o que afeta negativamente os algoritmos de predição, já que existem muito mais exemplos de uma classe do que de outra, tornando a predição pouco confiável.
 ```{r}
 data_train %>% 
   group_by(situacao) %>%
@@ -47,17 +47,22 @@ data_train %>%
 ```
 
 ## Como você poderia tratar isso?
-Para tratar o problema do desbalanceamento é preciso usar tecnicas de rebalanceamento. Duas das tecnicas de rebalanceamento são o UPSAMPLING e DOWNSAMPLING, no UPSAMPLING serão criadas amostras aleatórias para que a classe minoritária tenha o mesmo tamanho da classe majoritária, já no DOWNSAMPLING serão selecionadas aleatoriamente amostras da classe majoritária para que a mesma tenha o mesmo tamanho da classe majoritária. O SMOTE é uma tecnica hibrida que usa ambas as tecnicas mensionadas anteriomente para fazer o rebalanceamenteo das classes. 
+Para tratar o problema do desbalanceamento é preciso usar tecnicas de rebalanceamento. Duas das tecnicas de rebalanceamento são o UPSAMPLING e DOWNSAMPLING, no UPSAMPLING serão ciradas amostras aleatórias para que a classe minoritária tenha o mesmo tamanho da classe majoritária, já no DOWNSAMPLING serão selecionadas aleatoriamente amostras da classe majoritária para que a mesma tenha o mesmo tamanho da classe majoritária. O SMOTE é uma técnica hibrida que usa ambas as técnicas mensionadas anteriomente para fazer o rebalanceamenteo das classes. 
 
 ```{r}
-balanced_data <- SMOTE(situacao ~ ., data  = train_data)                         
-table(balanced_data$situacao) 
+balanced_data <- SMOTE(situacao ~ ., data = data_train_reparted)
+
+balanced_data %>% 
+  group_by(situacao) %>%
+  summarise(n_eleitos=(n()/nrow(balanced_data))*100) %>%
+  ggplot(aes(x=situacao, y=n_eleitos, fill=situacao)) + geom_col() + labs(x = "Situação", y = "Percentual")
 ```
 
 ## Treinando: um modelo de KNN, regressão logística, uma árvore de decisão e um modelo de adaboost.
 
 Treinando os modelos para testar o que resultará nas melhores predições
 
+#### Modelo KNN
 ```{r}
 k <- expand.grid(k = seq(20,100, length=81))
 fitControl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)  
@@ -73,7 +78,7 @@ model_knn
 ```
 
 
-
+#### Modelo regressão logistica
 ```{r}
 model_logistc <- train(situacao ~ ., 
                      data = balanced_data, 
@@ -84,6 +89,7 @@ model_logistc <- train(situacao ~ .,
 model_logistc
 ```
 
+#### Modelo Arvore de decisão
 ```{r}
 trctrl <- trainControl(method = "repeatedcv", number = 10, repeats = 5)
 set.seed(3333)
@@ -93,6 +99,7 @@ dtree_fit <- train(situacao ~., data = balanced_data, method = "rpart",
 dtree_fit
 ```
 
+#### Modelo Adaboosting
 ```{r}
 model_ada <- train(situacao ~ ., 
                      data = balanced_data, 
@@ -104,19 +111,17 @@ model_ada
 
 ## Reporte precision, recall e f-measure no treino e validação. Há uma grande diferença de desempenho no treino/validação? 
 
+
+#### Calculando os valores de CA, EA, CB, EB, onde o significado dos mesmos são respectivamente, corretamente classificados em A, Erroneamente classificados em A, corretamente classificados em B e Erroneamente classificados em B.
+
+### Modelo KNN
 ```{r}
-# Adicionando a predição aos dados a partir do KNN
-test_data$prediction <- predict(model_knn, test_data)
-```
+data_test_reparted$prediction <- predict(model_knn, data_test_reparted)
 
-#### Calculando os valores de CA, EA, CB, EB, onde o significado dos mesmos são respectivamente corretamente classificados em A, Erroneamente classificados em A, corretamente classificados em B e Erroneamente classificados em B.
-
-```{r}
-
-CA <- test_data %>% filter(situacao == "eleito", prediction == "eleito") %>% nrow()
-EA <- test_data %>% filter(situacao == "nao_eleito" , prediction == "eleito") %>% nrow() 
-CB <- test_data %>% filter(situacao == "nao_eleito" , prediction == "nao_eleito" ) %>% nrow()
-EB <- test_data %>% filter(situacao == "eleito", prediction == "nao_eleito" ) %>% nrow()
+CA <- data_test_reparted %>% filter(situacao == "eleito", prediction == "eleito") %>% nrow()
+EA <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "eleito") %>% nrow() 
+CB <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "nao_eleito" ) %>% nrow()
+EB <- data_test_reparted %>% filter(situacao == "eleito", prediction == "nao_eleito" ) %>% nrow()
 ```
 
 #### Calculando o precision, recall e f-measure.
@@ -129,7 +134,72 @@ recall
 f_measure
 ```
 
-Como pode-se observar o modelo conseguiu uma precisão, recall e f-mesure altos, o que indica que esse é um bom modelo para ser usado nas presições.
+### Modelo regressão logistica
+
+```{r}
+data_test_reparted$prediction <- predict(model_logistc, data_test_reparted)
+
+CA <- data_test_reparted %>% filter(situacao == "eleito", prediction == "eleito") %>% nrow()
+EA <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "eleito") %>% nrow() 
+CB <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "nao_eleito" ) %>% nrow()
+EB <- data_test_reparted %>% filter(situacao == "eleito", prediction == "nao_eleito" ) %>% nrow()
+```
+
+#### Calculando o precision, recall e f-measure.
+```{r}
+precision <- CA / (CA + EA)
+recall <- CA / (CA + EB)
+f_measure <- 2 * (precision * recall) / (precision + recall)
+precision
+recall
+f_measure
+```
+
+
+### Modelo Adaboosting
+
+```{r}
+data_test_reparted$prediction <- predict(model_ada, data_test_reparted)
+
+CA <- data_test_reparted %>% filter(situacao == "eleito", prediction == "eleito") %>% nrow()
+EA <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "eleito") %>% nrow() 
+CB <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "nao_eleito" ) %>% nrow()
+EB <- data_test_reparted %>% filter(situacao == "eleito", prediction == "nao_eleito" ) %>% nrow()
+```
+
+#### Calculando o precision, recall e f-measure.
+```{r}
+precision <- CA / (CA + EA)
+recall <- CA / (CA + EB)
+f_measure <- 2 * (precision * recall) / (precision + recall)
+precision
+recall
+f_measure
+```
+
+
+### Modelo Arvore de decisão
+
+```{r}
+data_test_reparted$prediction <- predict(dtree_fit, data_test_reparted)
+
+CA <- data_test_reparted %>% filter(situacao == "eleito", prediction == "eleito") %>% nrow()
+EA <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "eleito") %>% nrow() 
+CB <- data_test_reparted %>% filter(situacao == "nao_eleito" , prediction == "nao_eleito" ) %>% nrow()
+EB <- data_test_reparted %>% filter(situacao == "eleito", prediction == "nao_eleito" ) %>% nrow()
+```
+
+#### Calculando o precision, recall e f-measure.
+```{r}
+precision <- CA / (CA + EA)
+recall <- CA / (CA + EB)
+f_measure <- 2 * (precision * recall) / (precision + recall)
+precision
+recall
+f_measure
+```
+
+Analisando os resultados obtidos acima, os modelos adaboosting e regressão logistica obtiveram melhores resultados para o precision, recall e f-measure, o que indica que eles são os melhores modelos para serem usados nas predições.
 
 ## Interprete as saídas dos modelos. Quais atributos parecem ser mais importantes de acordo com cada modelo?
 ```{r}
@@ -139,15 +209,15 @@ varImp(dtree_fit)
 varImp(model_logistc)
 ```
 
-Para o modelo adaboost as variáveis mais importantes são: total_despesa, total_receita, quantidade_fornecedores
-Para o modelo knn as variáveis mais importantes são: total_despesa, total_receita, quantidade_fornecedores
-Para o modelo arvore de decisão as variáveis mais importantes são: total_receita, total_despesa, recursos_de_pessoas_juridicas
-Para o modelo regressão logistica as variáveis mais importantes são: recursos_de_pessoas_físicas, recursos_de_pessoas_juridicas, media_receita.
+* Para o modelo adaboost as variáveis mais importantes são: total_despesa, total_receita, quantidade_fornecedores
+* Para o modelo knn as variáveis mais importantes são: total_despesa, total_receita, quantidade_fornecedores
+* Para o modelo arvore de decisão as variáveis mais importantes são: total_receita, total_despesa, recursos_de_pessoas_juridicas
+* Para o modelo regressão logistica as variáveis mais importantes são: recursos_de_pessoas_físicas, recursos_de_pessoas_juridicas, media_receita.
 
 
 ## Envie seus melhores modelos à competição do Kaggle. Faça pelo menos uma submissão.
 ```{r}
-prediction <- predict(model_logistc, data_test)
+prediction <- predict(model_ada, data_test)
 
 data_out <- data.frame(ID = data_test$sequencial_candidato, Predicted = prediction)
 data_out$ID <-as.character(data_out$ID) 
